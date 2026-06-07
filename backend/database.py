@@ -5,7 +5,10 @@ conn = sqlite3.connect(
     check_same_thread=False
 )
 
-cursor = conn.cursor()
+def get_cursor():
+    return conn.cursor()
+
+cursor = get_cursor()
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS packets(

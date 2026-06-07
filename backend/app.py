@@ -1,8 +1,10 @@
 from fastapi import FastAPI
-from backend.database import cursor
 from fastapi.middleware.cors import CORSMiddleware
+from backend.database import get_cursor
+from backend.anomaly_detector import detect_anomalies
 
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -11,14 +13,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 def home():
     return {
         "message": "AI Wireless Network Monitor Running"
     }
 
+
 @app.get("/stats")
 def stats():
+
+    cursor = get_cursor()
 
     cursor.execute("""
         SELECT protocol, COUNT(*)
@@ -36,13 +42,20 @@ def stats():
     }
 
     for protocol, count in rows:
-        result[protocol] = count
+        if protocol in result:
+            result[protocol] = count
+        else:
+            result["OTHER"] += count
 
     result["TOTAL"] = sum(result.values())
 
     return result
+
+
 @app.get("/top-source-ips")
 def top_source_ips():
+
+    cursor = get_cursor()
 
     cursor.execute("""
         SELECT source_ip,
@@ -64,8 +77,12 @@ def top_source_ips():
         })
 
     return result
+
+
 @app.get("/top-destination-ips")
 def top_destination_ips():
+
+    cursor = get_cursor()
 
     cursor.execute("""
         SELECT destination_ip,
@@ -87,8 +104,12 @@ def top_destination_ips():
         })
 
     return result
+
+
 @app.get("/recent-packets")
 def recent_packets():
+
+    cursor = get_cursor()
 
     cursor.execute("""
         SELECT protocol,
@@ -105,7 +126,6 @@ def recent_packets():
     result = []
 
     for protocol, source, destination, timestamp in rows:
-
         result.append({
             "protocol": protocol,
             "source_ip": source,
@@ -114,3 +134,6 @@ def recent_packets():
         })
 
     return result
+@app.get("/anomalies")
+def anomalies():
+    return detect_anomalies()
